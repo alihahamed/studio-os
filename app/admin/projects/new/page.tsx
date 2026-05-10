@@ -19,18 +19,27 @@ export default function NewProjectPage() {
     setError("");
 
     try {
+      if (!organization?.id) {
+        throw new Error("No active organization selected");
+      }
+
       const res = await fetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: title.trim(),
-          clerk_org_id: organization?.id,
+          clerk_org_id: organization.id,
         }),
       });
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to create project");
+        if (data?.code === "ORG_NOT_SYNCED") {
+          throw new Error(
+            "Organization provisioning in progress. Retry in a few seconds."
+          );
+        }
+        throw new Error(data?.message || "Failed to create project");
       }
 
       const { project } = await res.json();

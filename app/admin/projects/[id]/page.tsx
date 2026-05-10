@@ -1,14 +1,24 @@
 import { auth } from "@clerk/nextjs/server";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import Link from "next/link";
 import { formatPrice } from "@/lib/utils";
+
+const ASSET_BUCKET = "project-assets";
 
 export default async function ProjectDetailPage(props: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await props.params;
   const { orgId } = await auth();
-  const supabase = await createClient();
+  const supabase = createAdminClient();
+
+  if (!orgId) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <p className="text-surface-400">Organization not selected.</p>
+      </div>
+    );
+  }
 
   // Get agency
   const { data: agency } = await supabase
@@ -37,6 +47,25 @@ export default async function ProjectDetailPage(props: {
   const contract = project.contracts?.[0];
   const payments = project.payments ?? [];
   const assets = project.assets ?? [];
+  const assetsWithUrls = await Promise.all(
+    assets.map(
+      async (asset: {
+        id: string;
+        file_name: string;
+        storage_path: string;
+        size_bytes: number | null;
+      }) => {
+        const { data } = await supabase.storage
+          .from(ASSET_BUCKET)
+          .createSignedUrl(asset.storage_path, 60 * 10);
+
+        return {
+          ...asset,
+          download_url: data?.signedUrl ?? null,
+        };
+      }
+    )
+  );
 
   const statusSteps = [
     "draft",
@@ -67,12 +96,28 @@ export default async function ProjectDetailPage(props: {
             Status: {project.status.replace("_", " ")}
           </p>
         </div>
-        <Link
-          href={`/admin/projects/${id}/proposal`}
-          className="rounded-lg border border-surface-700 px-4 py-2 text-sm font-medium text-surface-200 transition-colors hover:bg-surface-800"
-        >
-          Edit Proposal
-        </Link>
+        <div className="flex gap-3">
+          {project.status === "active" && (
+            <Link
+              href={`/portal/${id}/workspace`}
+              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700"
+            >
+              Open Workspace
+            </Link>
+          )}
+          <Link
+            href={`/portal/${id}`}
+            className="rounded-lg border border-surface-700 px-4 py-2 text-sm font-medium text-surface-200 transition-colors hover:bg-surface-800"
+          >
+            Open Client Portal
+          </Link>
+          <Link
+            href={`/admin/projects/${id}/proposal`}
+            className="rounded-lg border border-surface-700 px-4 py-2 text-sm font-medium text-surface-200 transition-colors hover:bg-surface-800"
+          >
+            Edit Proposal
+          </Link>
+        </div>
       </div>
 
       {/* Status Progress */}
@@ -200,17 +245,18 @@ export default async function ProjectDetailPage(props: {
           <h3 className="mb-3 text-sm font-medium text-surface-300">
             Assets ({assets.length})
           </h3>
-          {assets.length > 0 ? (
+          {assetsWithUrls.length > 0 ? (
             <div className="space-y-1">
-              {assets
+              {assetsWithUrls
                 .slice(0, 5)
-                .map((asset: { id: string; file_name: string }) => (
-                  <p
+                .map((asset) => (
+                  <a
                     key={asset.id}
-                    className="truncate text-sm text-surface-200"
+                    href={asset.download_url ?? "#"}
+                    className="block truncate text-sm text-surface-200 hover:text-brand-400"
                   >
                     {asset.file_name}
-                  </p>
+                  </a>
                 ))}
             </div>
           ) : (

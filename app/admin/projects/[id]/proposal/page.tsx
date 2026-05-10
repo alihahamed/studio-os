@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useParams, useRouter } from "next/navigation";
 import { formatPrice } from "@/lib/utils";
@@ -32,32 +32,39 @@ export default function ProposalEditorPage() {
   const [error, setError] = useState("");
   const [clientEmail, setClientEmail] = useState("");
 
-  // Load existing proposal
-  const loadProposal = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/proposals/${projectId}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.proposal) {
-          setProposalId(data.proposal.id);
-          setMarkdown(data.proposal.markdown_content || "");
-          setBasePrice(data.proposal.base_price || 0);
-          setCurrency(data.proposal.currency || "usd");
-        }
-        if (data.addons) {
-          setAddons(data.addons);
-        }
-      }
-    } catch {
-      setError("Failed to load proposal");
-    } finally {
-      setLoading(false);
-    }
-  }, [projectId]);
-
   useEffect(() => {
-    loadProposal();
-  }, [loadProposal]);
+    let isMounted = true;
+
+    async function loadProposal() {
+      try {
+        const res = await fetch(`/api/proposals/${projectId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (!isMounted) return;
+
+          if (data.proposal) {
+            setProposalId(data.proposal.id);
+            setMarkdown(data.proposal.markdown_content || "");
+            setBasePrice(data.proposal.base_price || 0);
+            setCurrency(data.proposal.currency || "usd");
+          }
+          if (data.addons) {
+            setAddons(data.addons);
+          }
+        }
+      } catch {
+        if (isMounted) setError("Failed to load proposal");
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+
+    void loadProposal();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [projectId]);
 
   // Save proposal
   async function handleSave() {

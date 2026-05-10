@@ -15,7 +15,6 @@ export async function POST(req: Request) {
     return new Response("Missing CLERK_WEBHOOK_SECRET", { status: 500 });
   }
 
-  // Get headers
   const headerPayload = await headers();
   const svix_id = headerPayload.get("svix-id");
   const svix_timestamp = headerPayload.get("svix-timestamp");
@@ -25,10 +24,8 @@ export async function POST(req: Request) {
     return new Response("Missing svix headers", { status: 400 });
   }
 
-  // Get raw body
   const body = await req.text();
 
-  // Verify signature
   const wh = new Webhook(WEBHOOK_SECRET);
   let evt: WebhookEvent;
 
@@ -45,19 +42,22 @@ export async function POST(req: Request) {
   const supabase = createAdminClient();
   const eventType = evt.type;
 
-  // Handle user creation — sync to profiles table
+  // user.created -> upsert profile
   if (eventType === "user.created") {
     const { id, email_addresses, first_name, last_name, image_url } = evt.data;
     const primaryEmail = email_addresses?.[0]?.email_address ?? null;
     const displayName = [first_name, last_name].filter(Boolean).join(" ") || null;
 
-    const { error } = await supabase.from("profiles").insert({
-      clerk_user_id: id,
-      role: "admin", // Default new users to admin; clients are created via invitation
-      display_name: displayName,
-      email: primaryEmail,
-      avatar_url: image_url ?? null,
-    });
+    const { error } = await supabase.from("profiles").upsert(
+      {
+        clerk_user_id: id,
+        role: "admin",
+        display_name: displayName,
+        email: primaryEmail,
+        avatar_url: image_url ?? null,
+      },
+      { onConflict: "clerk_user_id" }
+    );
 
     if (error) {
       console.error("Failed to sync user to profiles:", error);
@@ -65,11 +65,10 @@ export async function POST(req: Request) {
     }
   }
 
-  // Handle organization creation — sync to agencies table
+  // organization.created -> upsert agency + link owner profile when available
   if (eventType === "organization.created") {
     const { id, name, created_by } = evt.data;
 
-    // Find the creator's profile
     const { data: ownerProfile } = await supabase
       .from("profiles")
       .select("id")
@@ -78,11 +77,14 @@ export async function POST(req: Request) {
 
     const { data: agency, error } = await supabase
       .from("agencies")
-      .insert({
-        clerk_org_id: id,
-        name: name,
-        owner_id: ownerProfile?.id ?? null,
-      })
+      .upsert(
+        {
+          clerk_org_id: id,
+          name,
+          owner_id: ownerProfile?.id ?? null,
+        },
+        { onConflict: "clerk_org_id" }
+      )
       .select("id")
       .single();
 
@@ -91,7 +93,6 @@ export async function POST(req: Request) {
       return new Response("DB error", { status: 500 });
     }
 
-    // Link the owner's profile to this agency
     if (ownerProfile && agency) {
       await supabase
         .from("profiles")
@@ -100,44 +101,48 @@ export async function POST(req: Request) {
     }
   }
 
-  // Handle organization membership — sync client profiles
+  // organizationMembership.created -> upsert client profile and link to agency
   if (eventType === "organizationMembership.created") {
     const { organization, public_user_data } = evt.data;
     const clerkUserId = public_user_data?.user_id;
 
     if (clerkUserId) {
-      // Get the agency
-      const { data: agency } = await supabase
+      let { data: agency } = await supabase
         .from("agencies")
         .select("id")
         .eq("clerk_org_id", organization.id)
         .single();
 
-      if (agency) {
-        // Update existing profile or it's a new client
-        const { data: existingProfile } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("clerk_user_id", clerkUserId)
-          .single();
-
-        if (existingProfile) {
-          await supabase
-            .from("profiles")
-            .update({
-              agency_id: agency.id,
+      if (!agency) {
+        const { data: createdAgency } = await supabase
+          .from("agencies")
+          .upsert(
+            {
               clerk_org_id: organization.id,
-            })
-            .eq("id", existingProfile.id);
-        } else {
-          // New client being added via invitation
-          await supabase.from("profiles").insert({
+              name: organization.name ?? "Untitled Agency",
+            },
+            { onConflict: "clerk_org_id" }
+          )
+          .select("id")
+          .single();
+        agency = createdAgency ?? null;
+      }
+
+      if (agency) {
+        const { error } = await supabase.from("profiles").upsert(
+          {
             clerk_user_id: clerkUserId,
             clerk_org_id: organization.id,
             role: "client",
             agency_id: agency.id,
             email: public_user_data?.identifier ?? null,
-          });
+          },
+          { onConflict: "clerk_user_id" }
+        );
+
+        if (error) {
+          console.error("Failed to sync org membership to profiles:", error);
+          return new Response("DB error", { status: 500 });
         }
       }
     }

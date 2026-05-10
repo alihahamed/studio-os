@@ -1,11 +1,11 @@
 import { auth } from "@clerk/nextjs/server";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import Link from "next/link";
 
 export default async function AdminDashboard() {
   const { orgId } = await auth();
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   // Fetch agency
   const { data: agency } = await supabase

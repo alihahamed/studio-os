@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatPrice } from "@/lib/utils";
 import { PortalProposalView } from "@/components/portal/proposal-view";
+import { PaymentReturnHandler } from "@/components/portal/payment-return-handler";
 
 export default async function PortalPage(props: {
   params: Promise<{ projectId: string }>;
@@ -45,6 +46,7 @@ export default async function PortalPage(props: {
   if (contract || project.status === "signed" || project.status === "awaiting_deposit") {
     return (
       <div className="space-y-8">
+        <PaymentReturnHandler projectId={projectId} />
         <div>
           <h1 className="text-3xl font-semibold text-surface-50">
             {project.title}
@@ -75,6 +77,7 @@ export default async function PortalPage(props: {
   if (project.status === "active" || project.status === "completed" || project.status === "maintenance") {
     return (
       <div className="space-y-8">
+        <PaymentReturnHandler projectId={projectId} />
         <h1 className="text-3xl font-semibold text-surface-50">
           {project.title}
         </h1>

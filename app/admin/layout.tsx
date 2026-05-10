@@ -11,7 +11,7 @@ export default async function AdminLayout({
   const { userId, orgId } = await auth();
 
   if (!userId) redirect("/sign-in");
-  if (!orgId) redirect("/admin/create-org");
+  if (!orgId) redirect("/create-org");
 
   return (
     <div className="flex h-screen overflow-hidden bg-surface-950">

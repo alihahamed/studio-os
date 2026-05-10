@@ -60,7 +60,8 @@ export async function POST(req: Request) {
   }
 
   // Record the event for dedup
-  const eventType = (payload.event_type as string) || "unknown";
+  const eventType =
+    (payload.event_type as string) || (payload.type as string) || "unknown";
   const payloadType = (payload.payload_type as string) || null;
 
   await supabase.from("dodo_events").insert({

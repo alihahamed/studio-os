@@ -58,6 +58,7 @@ export async function POST(req: Request) {
         name: "Client",
       },
       payment_link: true,
+      redirect_immediately: true,
       product_cart: [
         {
           product_id: process.env.DODO_PRODUCT_ID || "prod_placeholder",

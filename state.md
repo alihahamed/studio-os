@@ -6,8 +6,8 @@
 
 ## Current Phase
 
-- **Phase:** `MVP Complete — Ready for Testing`
-- **Status:** `Complete`
+- **Phase:** `MVP Built - Debugging & Testing`
+- **Status:** `In Progress`
 - **Last Updated:** `2026-05-10`
 
 ---
@@ -15,33 +15,13 @@
 ## Last Session Work
 
 ### Summary
-Built full MVP: admin dashboard (sidebar, projects CRUD, proposal editor with markdown + addons + pricing, dispatch via Resend), client portal (proposal view with interactive toggles, signature canvas, contract signing, payment via DodoPayments), all API routes (projects, proposals, contracts, payments, webhooks), design system, and database migration. Build passes clean with 22 routes.
+Updated `HANDOFF.md` with current project truth: working MVP flows, fixed bugs, ngrok/webhook setup, Supabase/Composio details, asset vault implementation, verification status, known gaps, and next recommended phase.
 
 ### Files Changed
 | File | Change Type | Notes |
 |------|-------------|-------|
-| `app/globals.css` | Modified | Premium design system |
-| `app/admin/layout.tsx` | Created | Admin shell with auth guard |
-| `app/admin/page.tsx` | Created | Dashboard with stats + projects |
-| `app/admin/create-org/page.tsx` | Created | Clerk org creation |
-| `app/admin/projects/page.tsx` | Created | Project list table |
-| `app/admin/projects/new/page.tsx` | Created | Create project form |
-| `app/admin/projects/[id]/page.tsx` | Created | Project detail view |
-| `app/admin/projects/[id]/proposal/page.tsx` | Created | Markdown proposal editor |
-| `app/admin/settings/page.tsx` | Created | Settings placeholder |
-| `app/portal/[projectId]/layout.tsx` | Created | Client portal shell |
-| `app/portal/[projectId]/page.tsx` | Created | Status-aware portal page |
-| `app/portal/[projectId]/payment/page.tsx` | Created | Payment page |
-| `app/portal/[projectId]/workspace/page.tsx` | Created | Workspace placeholder |
-| `app/portal/[projectId]/deliverables/page.tsx` | Created | Deliverables placeholder |
-| `app/api/projects/route.ts` | Created | Project creation API |
-| `app/api/proposals/[projectId]/route.ts` | Created | Proposal GET/PUT API |
-| `app/api/proposals/dispatch/route.ts` | Created | Dispatch email API |
-| `app/api/contracts/sign/route.ts` | Created | Contract signing API |
-| `app/api/payments/create-session/route.ts` | Created | DodoPayments checkout API |
-| `components/admin/sidebar.tsx` | Created | Admin sidebar |
-| `components/admin/header.tsx` | Created | Admin header |
-| `components/portal/proposal-view.tsx` | Created | Interactive proposal + signature |
+| `HANDOFF.md` | Modified | Rewritten with complete current context for future LLM handoff |
+| `state.md` | Modified | Session sync after handoff refresh |
 
 ---
 
@@ -58,6 +38,13 @@ Built full MVP: admin dashboard (sidebar, projects CRUD, proposal editor with ma
 | 7 | Prices as BIGINT cents | Avoid float errors | 2026-05-10 |
 | 8 | Standard Webhooks for Dodo | HMAC-SHA256 + replay protection | 2026-05-10 |
 | 9 | DOMPurify for markdown rendering | Prevent XSS in client portal | 2026-05-10 |
+| 10 | `create-org` outside admin layout | Prevent infinite redirect when user has no org | 2026-05-10 |
+| 11 | Project-create org source = Clerk auth context first | Avoid client payload drift and reduce tenancy spoof risk | 2026-05-10 |
+| 12 | Auto-provision missing agency during project creation | Remove webhook timing race and unblock first project create | 2026-05-10 |
+| 13 | Sync caller profile tenancy during project create | Prevent RLS read failures (`Project not found`) after fallback provisioning | 2026-05-10 |
+| 14 | Admin server pages use service-role Supabase client with Clerk org filtering | Supabase anon SSR client lacks Clerk JWT claims, so RLS blocks valid admin reads | 2026-05-10 |
+| 15 | Payment return confirms against Dodo API before activating project | Local webhooks cannot receive Dodo events through `localhost`; return verification unblocks dev flow | 2026-05-10 |
+| 16 | Store project assets in private Supabase Storage bucket `project-assets` | Keeps uploaded files private while `assets` table stores searchable metadata | 2026-05-10 |
 
 ---
 
@@ -65,16 +52,22 @@ Built full MVP: admin dashboard (sidebar, projects CRUD, proposal editor with ma
 
 | # | Question | Priority | Owner |
 |---|----------|----------|-------|
-| 1 | Run migration SQL in Supabase SQL Editor | High | User |
-| 2 | Set up Clerk webhook endpoint | Medium | User |
-| 3 | Create DodoPayments product for checkout | Medium | User |
+| 1 | Does asset upload/download work through portal workspace after active status? | High | Agent |
+| 2 | End-to-end flow test needed | High | Agent |
 
 ---
 
 ## Notes
 
-- Build: 22 routes, exit code 0
 - Caveman mode active
-- Workspace + deliverables pages are placeholders (MVP scope)
+- Composio Supabase connection validated against Studio OS ref `vnmvtbcgrpwgncjafocv`
+- Workspace + deliverables are placeholder pages
 - PDF generation (Puppeteer) deferred to polish phase
 - GSAP animations deferred to polish phase
+- Lint passes with `npm.cmd run lint`
+- Dodo webhook table had no events after local test, confirming webhook did not reach local app
+- Configure Dodo webhook URL as `https://subside-stable-sagging.ngrok-free.dev/api/webhooks/dodo`
+- Configure Clerk webhook URL as `https://subside-stable-sagging.ngrok-free.dev/api/webhooks/clerk`
+- Lint passes with `npm.cmd run lint`
+- TypeScript passes with `npx.cmd tsc --noEmit`
+- Next immediate step: implement deliverables/handoff phase or PDF contract generation
