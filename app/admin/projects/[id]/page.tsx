@@ -2,6 +2,8 @@ import { auth } from "@clerk/nextjs/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import Link from "next/link";
 import { formatPrice } from "@/lib/utils";
+import { ProjectCompleteButton } from "@/components/admin/project-complete-button";
+import { DeliverableManager } from "@/components/admin/deliverable-manager";
 
 const ASSET_BUCKET = "project-assets";
 
@@ -97,6 +99,9 @@ export default async function ProjectDetailPage(props: {
           </p>
         </div>
         <div className="flex gap-3">
+          {project.status === "active" && (
+            <ProjectCompleteButton projectId={id} />
+          )}
           {project.status === "active" && (
             <Link
               href={`/portal/${id}/workspace`}
@@ -264,6 +269,8 @@ export default async function ProjectDetailPage(props: {
           )}
         </div>
       </div>
+
+      <DeliverableManager projectId={id} />
     </div>
   );
 }

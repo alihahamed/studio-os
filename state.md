@@ -6,22 +6,31 @@
 
 ## Current Phase
 
-- **Phase:** `MVP Built - Debugging & Testing`
+- **Phase:** `Client Dashboard + Deliverables Manager`
 - **Status:** `In Progress`
-- **Last Updated:** `2026-05-10`
+- **Last Updated:** `2026-05-11`
 
 ---
 
 ## Last Session Work
 
 ### Summary
-Updated `HANDOFF.md` with current project truth: working MVP flows, fixed bugs, ngrok/webhook setup, Supabase/Composio details, asset vault implementation, verification status, known gaps, and next recommended phase.
+Implemented dedicated client dashboard routes and separated admin-created deliverables from client-uploaded assets. Added `project_deliverables` migration, deliverables API, admin deliverable manager, client project list/detail pages, improved client navigation, and deliverables page backed by `project_deliverables` instead of `assets`.
 
 ### Files Changed
 | File | Change Type | Notes |
 |------|-------------|-------|
-| `HANDOFF.md` | Modified | Rewritten with complete current context for future LLM handoff |
-| `state.md` | Modified | Session sync after handoff refresh |
+| `supabase/migrations/002_project_deliverables.sql` | Created | Adds dedicated `project_deliverables` table |
+| `app/api/deliverables/route.ts` | Created | Admin creates file/link deliverables and clients list signed downloads |
+| `components/admin/deliverable-manager.tsx` | Created | Admin UI to add deliverable links/files |
+| `app/admin/projects/[id]/page.tsx` | Modified | Adds deliverable manager to project detail |
+| `app/portal/[projectId]/deliverables/page.tsx` | Modified | Reads `project_deliverables`, not client-uploaded `assets` |
+| `app/client/layout.tsx` | Created | Client dashboard shell/sidebar/header |
+| `app/client/page.tsx` | Modified | Client dashboard summary cards and recent projects |
+| `app/client/projects/page.tsx` | Created | Client project list route |
+| `app/client/projects/[projectId]/page.tsx` | Created | Client project detail route with actions |
+| `app/portal/[projectId]/layout.tsx` | Modified | Adds back navigation to client project detail |
+| `state.md` | Modified | Session sync after client dashboard/deliverables work |
 
 ---
 
@@ -45,6 +54,10 @@ Updated `HANDOFF.md` with current project truth: working MVP flows, fixed bugs, 
 | 14 | Admin server pages use service-role Supabase client with Clerk org filtering | Supabase anon SSR client lacks Clerk JWT claims, so RLS blocks valid admin reads | 2026-05-10 |
 | 15 | Payment return confirms against Dodo API before activating project | Local webhooks cannot receive Dodo events through `localhost`; return verification unblocks dev flow | 2026-05-10 |
 | 16 | Store project assets in private Supabase Storage bucket `project-assets` | Keeps uploaded files private while `assets` table stores searchable metadata | 2026-05-10 |
+| 17 | Completed project requires final payment before deliverables unlock | Matches handoff lifecycle: complete -> final pay -> maintenance/deliverables | 2026-05-11 |
+| 18 | Add separate client dashboard entry at `/client` | Lets users enter client-facing project view without direct project URL | 2026-05-11 |
+| 19 | Portal dashboard status order prioritizes project status over contract existence | Prevents active projects with contracts from showing stale signed/processing state | 2026-05-11 |
+| 20 | Use `project_deliverables` for admin handoff items | Prevents client-uploaded assets from appearing as final deliverables | 2026-05-11 |
 
 ---
 
@@ -52,8 +65,9 @@ Updated `HANDOFF.md` with current project truth: working MVP flows, fixed bugs, 
 
 | # | Question | Priority | Owner |
 |---|----------|----------|-------|
-| 1 | Does asset upload/download work through portal workspace after active status? | High | Agent |
-| 2 | End-to-end flow test needed | High | Agent |
+| 1 | Has `002_project_deliverables.sql` been run on Supabase? | High | User |
+| 2 | Does admin add deliverable -> client download work after migration? | High | Agent |
+| 3 | Does client dashboard show correct projects for real invited client accounts? | High | Agent |
 
 ---
 
@@ -61,7 +75,7 @@ Updated `HANDOFF.md` with current project truth: working MVP flows, fixed bugs, 
 
 - Caveman mode active
 - Composio Supabase connection validated against Studio OS ref `vnmvtbcgrpwgncjafocv`
-- Workspace + deliverables are placeholder pages
+- Deliverables page now unlocks signed asset downloads after final payment
 - PDF generation (Puppeteer) deferred to polish phase
 - GSAP animations deferred to polish phase
 - Lint passes with `npm.cmd run lint`
@@ -70,4 +84,7 @@ Updated `HANDOFF.md` with current project truth: working MVP flows, fixed bugs, 
 - Configure Clerk webhook URL as `https://subside-stable-sagging.ngrok-free.dev/api/webhooks/clerk`
 - Lint passes with `npm.cmd run lint`
 - TypeScript passes with `npx.cmd tsc --noEmit`
-- Next immediate step: implement deliverables/handoff phase or PDF contract generation
+- Latest validation: `npm.cmd run lint` and `npx.cmd tsc --noEmit` pass
+- Composio Supabase auth returned `Auth required`; migration was written locally but not applied remotely by agent
+- `HANDOFF.md` intentionally not updated per user request
+- Next immediate step: run `supabase/migrations/002_project_deliverables.sql`, then test admin add deliverable -> client deliverables

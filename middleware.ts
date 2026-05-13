@@ -2,6 +2,7 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
 const isAdminRoute = createRouteMatcher(["/admin(.*)"]);
 const isPortalRoute = createRouteMatcher(["/portal(.*)"]);
+const isClientRoute = createRouteMatcher(["/client(.*)"]);
 const isWebhookRoute = createRouteMatcher(["/api/webhooks(.*)"]);
 
 export default clerkMiddleware(async (auth, req) => {
@@ -9,7 +10,7 @@ export default clerkMiddleware(async (auth, req) => {
   if (isWebhookRoute(req)) return;
 
   // Protect admin and portal routes — require authentication
-  if (isAdminRoute(req) || isPortalRoute(req)) {
+  if (isAdminRoute(req) || isPortalRoute(req) || isClientRoute(req)) {
     await auth.protect();
   }
 });

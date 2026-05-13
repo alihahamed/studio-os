@@ -33,6 +33,10 @@ These flows are working as of 2026-05-10:
 - Payment return handler can confirm payment status against Dodo if webhook is delayed.
 - Active project workspace has asset upload/list/download.
 - Admin project detail shows uploaded assets as signed download links.
+- Admin can mark active projects complete.
+- Completed projects show final-payment CTA in client portal.
+- Final payment moves project to `maintenance`.
+- Deliverables page unlocks after final payment and lists signed asset downloads.
 - `npm.cmd run lint` passes.
 - `npx.cmd tsc --noEmit` passes.
 
@@ -373,7 +377,6 @@ Build note:
 
 High priority:
 
-- Deliverables page is still placeholder.
 - PDF generation for signed contracts is not implemented.
 - Real client invitation/auth hardening is incomplete; dispatch sends email but does not fully invite/link client into Clerk org.
 - Full production deployment not done.
@@ -384,7 +387,7 @@ Medium priority:
 - Settings page is placeholder.
 - Admin/client role restrictions need stricter enforcement for production.
 - Asset delete/replace is not implemented.
-- Final payment/handoff flow is incomplete.
+- Dedicated deliverable file type/table is not implemented; current deliverables use uploaded `assets`.
 
 Future/Phase 2+:
 
@@ -398,29 +401,24 @@ Future/Phase 2+:
 
 ## 11. Next Recommended Phase
 
-Build **Deliverables + Handoff** next.
+Build **Signed Contract PDF Generation** next.
 
 Suggested scope:
 
-1. Create deliverables metadata table or use `assets` with a deliverable flag/type. If avoiding migration for now, create minimal API + UI backed by `assets` only if acceptable.
-2. Admin UI to add deliverable links/files for active/completed project.
-3. Client `/portal/[projectId]/deliverables` page that unlocks at `completed` or `maintenance`.
-4. Add admin action to mark project `completed`.
-5. Final payment session for remaining 50%.
-6. On final payment success, project moves `maintenance`.
-7. Update dashboard counts/revenue and state docs.
-
-Alternative next phase:
-
-- Implement PDF generation for signed contracts first. Use Puppeteer locally; for Vercel use `@sparticuz/chromium`.
+1. Add server-rendered contract document route or template.
+2. Generate immutable PDF after `/api/contracts/sign`.
+3. Store PDF in private Supabase Storage.
+4. Save `contracts.pdf_storage_path`.
+5. Show signed contract download in admin project detail and client portal.
+6. Keep Puppeteer local first; for Vercel use `@sparticuz/chromium`.
 
 Recommended order:
 
-1. Deliverables page and completion action.
-2. Final payment.
-3. PDF contract generation.
-4. Client auth/invitation hardening.
-5. Mobile/polish.
+1. PDF contract generation.
+2. Real client Clerk invitation/linking.
+3. Dedicated deliverables table or admin deliverable manager.
+4. Mobile/responsive polish.
+5. GSAP roadmap.
 
 ---
 
@@ -437,4 +435,3 @@ Recommended order:
 - Webhook routes must stay outside Clerk auth protection.
 - For Composio Supabase queries, always target project ref `vnmvtbcgrpwgncjafocv`.
 - Be careful with dirty worktree; existing unrelated changes may be user/previous-agent work.
-
